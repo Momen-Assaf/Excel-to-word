@@ -3,7 +3,7 @@ from docx import Document
 from docx.shared import Pt
 import tkinter as tk
 from tkinter import filedialog
-import os
+import numpy as np
 
 def excel_to_word(excel_path, word_path):
     # Read the Excel file
@@ -22,23 +22,26 @@ def excel_to_word(excel_path, word_path):
         # Add a new section for each sheet
         doc.add_heading(sheet_name, level=1)
 
-        # Convert DataFrame to a list of lists
-        data = sheet_data.values.tolist()
-        
-        # Add table to the document
-        table = doc.add_table(rows=1, cols=sheet_data.shape[1])
-        table.style = 'Table Grid'
-        
-        # Add header row
-        hdr_cells = table.rows[0].cells
-        for i, column in enumerate(sheet_data.columns):
-            hdr_cells[i].text = str(column)
+        # Replace NaN with empty strings
+        sheet_data = sheet_data.replace(np.nan, '')
 
-        # Add data rows
-        for row in data:
-            row_cells = table.add_row().cells
-            for i, cell in enumerate(row):
-                row_cells[i].text = str(cell)
+        # Add table to the document only if there is data to display
+        if not sheet_data.empty:
+            table = doc.add_table(rows=1, cols=sheet_data.shape[1])
+            table.style = 'Table Grid'
+
+            # Add header row
+            hdr_cells = table.rows[0].cells
+            for i, column in enumerate(sheet_data.columns):
+                hdr_cells[i].text = str(column)
+
+            # Add data rows, skipping empty rows
+            for _, row in sheet_data.iterrows():
+                if any(row):  # Skip the row if all fields are empty
+                    row_cells = table.add_row().cells
+                    for i, cell in enumerate(row):
+                        if cell:  # Only add the cell if it's not empty
+                            row_cells[i].text = str(cell)
 
     # Save the Word document
     doc.save(word_path)
